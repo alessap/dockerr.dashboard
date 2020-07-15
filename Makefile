@@ -1,6 +1,10 @@
-build:
+buildr:
 	R CMD build .
+
+builddocker:
 	docker build -t dockerr.dashboard .
+
+buildall: buildr builddocker
 
 runlocal:
 	docker run --user shiny -p 80:3838 dockerr.dashboard
@@ -14,3 +18,9 @@ deploy:
 
 runcloud:
 	docker run --user shiny -p 80:3838 dashboards.azurecr.io/cloudexploration/dockerr.dashboard
+
+builddockerslim:
+	docker build -t dockerr.dashboard.slim -f ./Dockerfile.slim .
+
+runlocalslim:
+	docker run -p 80:3838 dockerr.dashboard.slim

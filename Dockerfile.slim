@@ -1,0 +1,175 @@
+# Dockerfile
+FROM rhub/r-minimal
+
+RUN apk update && apk add bash linux-headers
+RUN installr -a "libxml2-dev file automake autoconf openssl-dev openssl libressl-dev libxml2 curl-dev" -c xml2
+
+COPY dockerr.dashboard_0.0.0.9000.tar.gz ./
+RUN mkdir /pkgs && tar -C /pkgs/ -zxvf dockerr.dashboard_0.0.0.9000.tar.gz
+RUN installr -c desc
+RUN installr -c glue
+
+RUN R -e ".libPaths();"
+RUN R -e ".libPaths('/usr/local/lib/R/library/'); \
+library(desc); \
+library(glue); \
+pkg <- desc::desc_get_deps('/pkgs/dockerr.dashboard')\$package; \
+ver <- desc::desc_get_deps('/pkgs/dockerr.dashboard')\$version; \
+print(pkg); \
+print(ver);\
+for (i in 1:length(pkg)){ \
+    if (ver[i] != '*'){ \
+        ver_parsed <- strsplit(ver[i], ' ')[[1]][2]; \
+        pkgver <- glue::glue(pkg[i],'@',ver_parsed); \
+        install.packages(pkgver, repos='https://cloud.r-project.org/'); \
+    }; \
+    if (ver[i] == '*'){ \
+        pkgver <- glue::glue(pkg[i]); \
+        install.packages(pkgver, repos='https://cloud.r-project.org/'); \
+    }; \
+};"
+RUN R CMD INSTALL --library=/usr/local/lib/R/library/ /pkgs/dockerr.dashboard
+
+EXPOSE 3838
+
+CMD ["R", "-e", "library(dockerr.dashboard); library(shiny); options(shiny.port = 3838, 'shiny.host', '0.0.0.0'); run_app(port=3838)"]
+
+
+# # RUN installr -c config
+# # RUN installr -c golem
+# # RUN installr -c shiny
+# # RUN installr -c processx
+# # RUN installr -c attempt
+# # RUN installr -c DT
+# # RUN installr -c glue
+# # RUN installr -c htmltools
+# # RUN installr -c pkgload
+# RUN installr -c testthat
+# RUN installr -c config
+# # RUN installr -c shiny
+# RUN installr -c processx
+# RUN installr -c attempt
+# RUN installr -c DT
+# # RUN installr -c glue
+# RUN installr -c htmltools
+# RUN installr -c pkgload
+# RUN installr -t "libxml2-dev" -c xml2
+# 
+# RUN installr -c git2r
+# RUN installr -c dockerfiler
+# RUN installr -d -a "file automake autoconf" fs
+# RUN installr -c here
+# RUN installr -a "openssl-dev openssl libressl-dev libxml2 curl-dev" -c openssl
+# RUN installr -c remotes
+# RUN installr -c roxygen2
+# RUN installr -c usethis
+# RUN installr -c brew
+# RUN installr -c knitr
+# RUN installr -c purrr
+# RUN installr -c stringi
+# RUN installr -c stringr
+# RUN installr -c highr
+# RUN installr -c markdown
+# 
+# RUN installr -c xfun
+# RUN installr -c clipr
+# RUN installr -c curl
+# RUN installr -c gh
+# RUN installr -c rematch2
+# RUN installr -c whisker
+# RUN installr -c ini
+# RUN installr -c httr
+# RUN installr -c tibble
+# RUN installr -c openssl
+# RUN installr -c lifecycle
+# RUN installr -c pillar
+# RUN installr -c pkgconfig
+# RUN installr -c vctrs
+# RUN installr -c askpass
+# RUN installr -c utf8
+# RUN installr -c sys 
+# RUN installr -c golem
+# 
+# 
+# RUN installr -c glue
+# RUN installr -c shiny
+# 
+# #      RUN R -e ".libPaths();"
+# #      # RUN installr -c -t "openssl-dev curl-dev"
+# #      RUN R -e ".libPaths('/usr/local/lib/R/library/'); \
+# #      library(desc); \
+# #      library(glue); \
+# #      pkg <- desc::desc_get_deps('/pkgs/dockerr.dashboard')\$package; \
+# #      ver <- desc::desc_get_deps('/pkgs/dockerr.dashboard')\$version; \
+# #      print(pkg); \
+# #      print(ver);\
+# #      for (i in 1:length(pkg)){ \
+# #          if (ver[i] != '*'){ \
+# #              ver_parsed <- strsplit(ver[i], ' ')[[1]][2]; \
+# #              pkgver <- glue::glue(pkg[i],'@',ver_parsed); \
+# #              install.packages(pkgver, repos='https://cloud.r-project.org/'); \
+# #          }; \
+# #          if (ver[i] == '*'){ \
+# #              pkgver <- glue::glue(pkg[i]); \
+# #              install.packages(pkgver, repos='https://cloud.r-project.org/'); \
+# #          }; \
+# #      };"
+# #      RUN R CMD INSTALL --library=/usr/local/lib/R/library/ /pkgs/dockerr.dashboard
+# #      
+# #      
+# # RUN apt-get update && apt-get install -y \
+# #     sudo \
+# #     gdebi-core \
+# #     pandoc \
+# #     pandoc-citeproc \
+# #     libcurl4-gnutls-dev \
+# #     libcairo2-dev \
+# #     libxt-dev \
+# #     libssl-dev \
+# #     libxml2-dev \
+# #     xtail \
+# #     wget
+# # 
+# # 
+# # # Download and install shiny server
+# # RUN wget --no-verbose --no-check-certificate https://download3.rstudio.org/ubuntu-14.04/x86_64/VERSION -O "version.txt" && \
+# #     VERSION=$(cat version.txt)  && \
+# #     wget --no-verbose --no-check-certificate "https://download3.rstudio.org/ubuntu-14.04/x86_64/shiny-server-$VERSION-amd64.deb" -O ss-latest.deb && \
+# #     gdebi -n ss-latest.deb && \
+# #     rm -f version.txt ss-latest.deb && \
+# #     . /etc/environment && \
+# #     R -e ".libPaths('/usr/local/lib/R/site-library/'); install.packages(c('shiny', 'rmarkdown'), repos='https://cloud.r-project.org/')" && \
+# #     cp -R /usr/local/lib/R/site-library/shiny/examples/* /srv/shiny-server/ && \
+# #     chown shiny:shiny /var/lib/shiny-server
+# # 
+# # EXPOSE 3838
+# # 
+# # COPY shiny-server.sh /usr/bin/shiny-server.sh
+# # RUN chmod +x /usr/bin/shiny-server.sh
+# # 
+# # COPY dockerr.dashboard_0.0.0.9000.tar.gz ./
+# # RUN mkdir /pkgs && tar -C /pkgs/ -zxvf dockerr.dashboard_0.0.0.9000.tar.gz
+# # RUN . /etc/environment && R -e ".libPaths('/usr/local/lib/R/site-library/');install.packages(c('desc', 'glue'), repos='https://cloud.r-project.org/');"
+# # RUN . /etc/environment && R -e ".libPaths('/usr/local/lib/R/site-library/'); \
+# # library(desc); \
+# # library(glue); \
+# # pkg <- desc::desc_get_deps('/pkgs/dockerr.dashboard')\$package; \
+# # ver <- desc::desc_get_deps('/pkgs/dockerr.dashboard')\$version; \
+# # print(pkg); \
+# # print(ver);\
+# # for (i in 1:length(pkg)){ \
+# #     if (ver[i] != '*'){ \
+# #         ver_parsed <- strsplit(ver[i], ' ')[[1]][2]; \
+# #         pkgver <- glue::glue(pkg[i],'@',ver_parsed); \
+# #         install.packages(pkgver, repos='https://cloud.r-project.org/'); \
+# #     }; \
+# #     if (ver[i] == '*'){ \
+# #         pkgver <- glue::glue(pkg[i]); \
+# #         install.packages(pkgver, repos='https://cloud.r-project.org/'); \
+# #     }; \
+# # };"
+# # RUN R CMD INSTALL --library=/usr/local/lib/R/site-library/ /pkgs/dockerr.dashboard
+# # 
+# # COPY app.R /srv/shiny-server/app.R
+# # CMD ["/usr/bin/shiny-server.sh"]
+# # 
